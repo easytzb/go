@@ -40,8 +40,9 @@ func main() {
 
 	fp := gofeed.NewParser()
 	for t, url := range atom {
-		feed, _ := fp.ParseURL(url)
-		if feed.Items[0].Published == "" {
+		feed, err := fp.ParseURL(url)
+		if err != nil || feed.Items[0].Published == "" {
+			log.Println(t, "下载ATOM错误", err)
 			continue
 		}
 
@@ -50,7 +51,7 @@ func main() {
 			continue
 		}
 
-		err := exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[0].Title).Run()
+		err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[0].Title).Run()
 		if err != nil {
 			log.Println(t, "微信信息发送失败:6", err)
 			continue
