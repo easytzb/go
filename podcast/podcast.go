@@ -24,6 +24,7 @@ func main() {
 		"电影沙龙":           "http://www.ximalaya.com/album/273057.xml",
 		"罗辑思维":           "http://podcast.taobility.com/category/logicthinking/feed/",
 		"大内密谈":           "http://nj.lizhi.fm/rss/14275.xml",
+		"轻阅读":            "http://feed.cri.cn/rss/31295a33-de9b-409a-82ce-7905207f6c00",
 	}
 
 	redis := redis.NewClient(&redis.Options{
