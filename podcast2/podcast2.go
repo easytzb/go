@@ -7,9 +7,9 @@ import (
 	//"os/exec"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -83,35 +83,50 @@ func main() {
 			continue
 		}
 
-		len := len(feed.Items)
+		itemsLen := len(feed.Items)
+		if itemsLen == 0 {
+			log.Println(t, "items长度为0:5", err)
+			continue
+		}
+
 		oldPublished, err2 := redis.HGet("atom1", t).Int64()
-		for i := 0; i < len; i++ {
-			newPublished := feed.Items[0].PublishedParsed.Unix()
-			if err2 != nil {
-				//默认两小时前
-				log.Println(t, "最后更新时间获取失败", err2)
-				oldPublished = time.Now().Unix() - 7200
-			}
+		if err2 != nil {
+			//默认10天前
+			log.Println(t, "最后更新时间获取失败", err2)
+			oldPublished = 0
+		}
+
+		//正则匹配出item
+		match := regexp.MustCompile(`(<item>(?:.|\s)+?<\/item>)`).FindAllString(string(body), -1)
+		if match == nil || len(match) == 0 {
+			log.Println(t, "正则匹配出错")
+			continue
+		}
+
+		loopTimes := itemsLen
+		if itemsLen > 2 {
+			loopTimes = 2
+		}
+		for i := 0; i < loopTimes; i++ {
+			newPublished := feed.Items[i].PublishedParsed.Unix()
 			if newPublished <= oldPublished {
-				log.Println(t, feed.Items[0].PublishedParsed)
-				continue
+				//还没有更新
+				break
 			}
 
-			log.Println(t, newPublished, oldPublished)
-
-			//err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[0].Title).Run()
+			//err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[i].Title).Run()
 			//if err != nil {
 			//	log.Println(t, "微信信息发送失败:6", err)
 			//	continue
 			//}
 
-			_, err = redis.LPush("atomQue", t).Result()
+			_, err = redis.LPush("atomQue", match[i]).Result()
 			if err != nil {
 				log.Println(t, "item写入失败", err)
 				continue
 			}
 		}
-		_, err = redis.HSet("atom1", t, strconv.FormatInt(newPublished, 10)).Result()
+		_, err = redis.HSet("atom1", t, strconv.FormatInt(feed.Items[0].PublishedParsed.Unix(), 10)).Result()
 		if err != nil {
 			log.Println(t, "更新日期写入失败", err)
 			continue
