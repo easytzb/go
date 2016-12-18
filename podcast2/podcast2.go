@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/mmcdole/gofeed"
 	"gopkg.in/redis.v5"
-	"log"
-	//"os/exec"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -114,11 +114,11 @@ func main() {
 				break
 			}
 
-			//err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[i].Title).Run()
-			//if err != nil {
-			//	log.Println(t, "微信信息发送失败:6", err)
-			//	continue
-			//}
+			err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", t+" "+feed.Items[i].Title).Run()
+			if err != nil {
+				log.Println(t, "微信信息发送失败:6", err)
+				continue
+			}
 
 			_, err = redis.LPush("atomQue", match[i]).Result()
 			if err != nil {
