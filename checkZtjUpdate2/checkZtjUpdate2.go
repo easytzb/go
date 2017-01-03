@@ -1,17 +1,18 @@
 package main
 
 import (
-	"gopkg.in/redis.v4"
+	"gopkg.in/redis.v5"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 func main() {
 	//r, err := http.Get("http://m.qidian.com/book/showbook.aspx?bookid=3347595")
-	url := "http://www.45xs.com/books/31/31565/"
+	url := "http://zetianjixiaoshuo.com/"
 	r, err := http.Get(url)
 	if err != nil {
 		log.Println("获取网页内容失败:1", url, err)
@@ -32,7 +33,7 @@ func main() {
 	//return
 
 	//date := regexp.MustCompile(`\d{4}(/|-)\d{1,2}(/|-)\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}`).FindString(string(body[:]))
-	match := regexp.MustCompile(`infot">.+?<a href="(.+?)" target`).FindSubmatch(body)
+	match := regexp.MustCompile(`最新章节：<a href="(.+?)" title`).FindSubmatch(body)
 	if len(match) == 0 {
 		log.Println("解析最新章节地址失败:3")
 		return
@@ -75,18 +76,16 @@ func main() {
 		return
 	}
 
-	nmatch := regexp.MustCompile(`--go-->(.+?)<!--over`).FindSubmatch(nbody)
+	nmatch := regexp.MustCompile(`<p>(.|\s)+?</p>`).FindAllString(string(nbody), -1)
 	if len(nmatch) == 0 {
 		log.Println("解析最新内容失败:3")
 		return
 	}
 
-	msg := regexp.MustCompile(`<a[^>]+?>.+?<\/[^>]+?>|<[^>/]+?>.+?<\/[^>]+?>|&nbsp;`).ReplaceAll(nmatch[1], []byte(""))
-	msg2 := regexp.MustCompile(`<br /><br />`).ReplaceAll(msg, []byte("__LINE__"))
-	msg3 := regexp.MustCompile(`<\/div>`).ReplaceAll(msg2, []byte(""))
+	msg := regexp.MustCompile(`\n|<p>|</p>`).ReplaceAllString(strings.Join(nmatch, "__LINE__"), "")
 
 	//调用PHP脚本发送微信通知
-	err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", string(msg3), "GBK").Run()
+	err = exec.Command("/usr/bin/php", "/webser/www/tchat/cron/index.php", "sendMsg2Me", msg).Run()
 	if err != nil {
 		log.Println("微信信息发送失败:6", err)
 		return
